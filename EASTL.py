@@ -75,30 +75,28 @@ class VectorBase_SyntheticProvider:
     def get_child_index(self, name):
         if name.startswith('[') and name.endswith(']'):
             try:
-                return int(name.lstrip('[').rstrip(']'))
+                return int(name.lstrip('[').rstrip(']')) + 2
             except:
                 return -1
-        num_children = self.num_children()
         if name == 'size':
-            return num_children - 2
+            return 0
         if name == 'capacity':
-            return num_children - 1
+            return 1
 
     def get_child_at_index(self, index):
-        num_children = self.num_children()
-        if index < 0 or index >= num_children:
+        if index < 0 or index >= self.num_children():
             return None
         target = lldb.debugger.GetSelectedTarget()
         byte_order = target.GetByteOrder()
-        if index == num_children - 2:
+        if index == 0:
             size_data = lldb.SBData.CreateDataFromUInt32Array(byte_order, 8, [ self.num_children() - 2 ])
             return self.valobj.CreateValueFromData('size', size_data, target.FindFirstType('eastl_size_t'))
-        if index == num_children - 1:
+        if index == 1:
             capacity = int((self.capacity.GetValueAsUnsigned() - self.begin.GetValueAsUnsigned()) / self.data_size)
             size_data = lldb.SBData.CreateDataFromUInt32Array(byte_order, 8, [ capacity ])
             return self.valobj.CreateValueFromData('capacity', size_data, target.FindFirstType('eastl_size_t'))
         try:
-            offset = index * self.data_size
+            offset = (index - 2) * self.data_size
             return self.begin.CreateChildAtOffset(f'[{index}]', offset, self.data_type)
         except:
             return None
