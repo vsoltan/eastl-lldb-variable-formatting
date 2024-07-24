@@ -32,7 +32,6 @@ def pair_SummaryProvider(valobj, internal_dict):
 
 
 class VectorBase_SyntheticProvider:
-
     def __init__(self, valobj, internal_dict):
         self.valobj = valobj
 
@@ -151,22 +150,29 @@ class basic_string_SyntheticChildrenProvider:
     def is_sso(self) -> bool:
         return not self.is_heap()
 
-    def is_heap(self) -> bool:
-        remaining_size = self.sso_buffer.GetChildMemberWithName(
-            "mRemainingSizeField"
-        ).GetChildMemberWithName("mnRemainingSize")
-        return not not (remaining_size.GetValueAsUnsigned() & self.get_sso_mask())
+    def get_heap_capaciy(self) -> int:
+        try:
+            print("TODO")
+        except Exception:
+            return 0
 
     def get_heap_mask(self) -> int:
         byte_order = GetSystemByteOrder()
         if byte_order == lldb.eByteOrderLittle:
-            # TODO: actually implement this properly ~(size_type(~size_type(0)) >> 1)
-            return 0x8000000000000000
+            return self.valobj.EvaluateExpression(
+                "~(size_type(~size_type(0)) >> 1"
+            ).GetValueAsUnsigned()
         elif byte_order == lldb.eByteOrderBig:
             return 0x1
         else:
             print("error: unrecognized byte ordering. Not little or big endian")
             return 0x0
+
+    def is_heap(self) -> bool:
+        remaining_size = self.sso_buffer.GetChildMemberWithName(
+            "mRemainingSizeField"
+        ).GetChildMemberWithName("mnRemainingSize")
+        return not not (remaining_size.GetValueAsUnsigned() & self.get_sso_mask())
 
     def calculate_length(self) -> int:
         if self.is_sso():
@@ -175,18 +181,29 @@ class basic_string_SyntheticChildrenProvider:
             ).GetChildMemberWithName("mnRemainingSize")
             return self.get_sso_capacity() - length_value.GetValueAsUnsigned()
         else:
-            # heap_len = self.heap_buffer.GetChildMemberWithName('mnSize')
-            # return self.valobj.CreateValueFromData('length',  heap_len.GetData(), length_type)
-            return 0
+            return self.heap_buffer.GetChildMemberWithName(
+                "mnSize"
+            ).GetValueAsUnsigned()
 
     def calculate_capacity(self) -> int:
         if self.is_sso():
             return self.get_sso_capacity()
         else:
-            return 0
-            # TODO: account for mask
-            # heap_capacity = self.heap_buffer.GetChildMemberWithName('mnCapacity')
-            # return self.valobj.CreateValueFromData('capacity', heap_capacity.GetData(), capacity_type)
+            heap_capacity = self.heap_buffer.GetChildMemberWithName("mnCapacity")
+            byte_order = GetSystemByteOrder()
+            if byte_order == lldb.eByteOrderLittle:
+                print(f"{heap_capacity.GetValueAsUnsigned()} >> 1")
+                return self.valobj.EvaluateExpression(
+                    f"{heap_capacity.GetValueAsUnsigned()} >> 1"
+                ).GetValueAsUnsigned()
+            elif byte_order == lldb.eByteOrderBig:
+                print(f"{heap_capacity.GetValueAsUnsigned()} & ~{self.get_heap_mask()}")
+                return self.valobj.EvaluateExpression(
+                    f"{heap_capacity.GetValueAsUnsigned()} & ~{self.get_heap_mask()}"
+                ).GetValueAsUnsigned()
+            else:
+                print("error: unrecognized byte ordering. Not little or big endian")
+                return 0
 
     def get_length(self) -> lldb.SBValue:
         length_type = FindType("size_type").GetTypedefedType()
@@ -201,7 +218,6 @@ class basic_string_SyntheticChildrenProvider:
         )
 
     def get_value(self) -> lldb.SBValue:
-        print("callced get_value")
         try:
             str_len = self.calculate_length()
             print("str_len", str_len)
@@ -212,11 +228,8 @@ class basic_string_SyntheticChildrenProvider:
                     "value", string_value.GetData(), element_type.GetArrayType(str_len)
                 )
             else:
-                print("oi?")
                 return None
         except Exception as e:
-            print("get_value exception", e)
-            print("get_value", e)
             message = "Error reading characters of string"
             return self.valobj.CreateValueFromData(
                 "value",
@@ -268,9 +281,6 @@ class basic_string_SyntheticChildrenProvider:
         self.sso_buffer = string_data.GetChildMemberWithName("sso")
         self.heap_buffer = string_data.GetChildMemberWithName("heap")
         self.value_type = self.valobj.GetType().GetTemplateArgumentType(0)
-
-        # if self.valobj.GetType().IsPointerType():
-        #     self.value_type = self.valobj.GetPointeeType().GetTemplateArgumentType(0)
         return False
 
 
@@ -374,18 +384,21 @@ def UniquePtrSummaryProvider(valobj, internal_dict):
 
 
 def __lldb_init_module(debugger, internal_dict):
+    # When debugging, run this command so that formatters are properly replaced instead of appended
+    debugger.HandleCommand(f"type category delete {type_category}")
+
     debugger.HandleCommand(
-        f"type summary add -x ^eastl::pair<.*> -F EASTL.pair_SummaryProvider -w {type_category}"
+        f"type summary add -x ^eastl::pair<.*>$ -F EASTL.pair_SummaryProvider -w {type_category}"
     )
 
     debugger.HandleCommand(
-        f"type synthetic add -prx ^eastl::basic_string<char>$ -l EASTL.basic_string_SyntheticChildrenProvider -w {type_category}"
+        f"type synthetic add -x ^eastl::basic_string<.*>$ -C true -l EASTL.basic_string_SyntheticChildrenProvider -w {type_category}"
     )
     debugger.HandleCommand(
-        f"type synthetic add -x ^eastl::VectorBase<.*> -C true -l EASTL.VectorBase_SyntheticProvider -w {type_category}"
+        f"type synthetic add -x ^eastl::VectorBase<.*>$ -C true -l EASTL.VectorBase_SyntheticProvider -w {type_category}"
     )
     debugger.HandleCommand(
-        f"type summary add -x ^eastl::VectorBase<.*> -e -F EASTL.VectorBase_SummaryProvider -w {type_category}"
+        f"type summary add -x ^eastl::VectorBase<.*>$ -e -F EASTL.VectorBase_SummaryProvider -w {type_category}"
     )
     # debugger.HandleCommand(f'type synthetic add -x ^eastl::unique_ptr<.+> >$ --python-class EASTL.UniquePtrSyntheticProvider -w {type_category}')
     debugger.HandleCommand(f"type category enable {type_category}")
