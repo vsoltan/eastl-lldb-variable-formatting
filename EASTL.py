@@ -123,125 +123,26 @@ def VectorBase_SummaryProvider(valobj, internal_dict):
         return ""
 
 
-class basic_string_SyntheticChildrenProvider:
-    # We could get SSO_CAPACITY using GetStaticFieldWithName if we were able to use a more up-to-date version of lldb
-    # XCode insists on using the python that ships with the OS as well as the LLDB framework that was built with it
-    # https://lldb.llvm.org/python_api/lldb.SBType.html#lldb.SBType.GetStaticFieldWithName
-    # Until a newer version ships with MacOS, we reimplement the logic here for now
-    def get_sso_capacity(self) -> int:
-        try:
-            return int(
-                (FindType("HeapLayout").GetByteSize() - FindType("char").GetByteSize())
-                / self.value_type.GetByteSize()
-            )
-        except Exception:
-            return 0
-
-    # I could not figure out a way to get this from the binary image, might be inlined by the compiler...
-    def get_sso_mask(self) -> int:
-        byte_order = GetSystemByteOrder()
-        if byte_order == lldb.eByteOrderLittle:
-            return 0x80
-        elif byte_order == lldb.eByteOrderBig:
-            return 0x1
-        print("error: unrecognized byte ordering. Not little or big endian")
-        return 0x0
-
-    def is_sso(self) -> bool:
-        return not self.is_heap()
-
-    def get_heap_capaciy(self) -> int:
-        try:
-            print("TODO")
-        except Exception:
-            return 0
-
-    def get_heap_mask(self) -> int:
-        byte_order = GetSystemByteOrder()
-        if byte_order == lldb.eByteOrderLittle:
-            return self.valobj.EvaluateExpression(
-                "~(size_type(~size_type(0)) >> 1"
-            ).GetValueAsUnsigned()
-        elif byte_order == lldb.eByteOrderBig:
-            return 0x1
-        else:
-            print("error: unrecognized byte ordering. Not little or big endian")
-            return 0x0
-
-    def is_heap(self) -> bool:
-        remaining_size = self.sso_buffer.GetChildMemberWithName(
-            "mRemainingSizeField"
-        ).GetChildMemberWithName("mnRemainingSize")
-        return not not (remaining_size.GetValueAsUnsigned() & self.get_sso_mask())
-
-    def calculate_length(self) -> int:
-        if self.is_sso():
-            length_value = self.sso_buffer.GetChildMemberWithName(
-                "mRemainingSizeField"
-            ).GetChildMemberWithName("mnRemainingSize")
-            return self.get_sso_capacity() - length_value.GetValueAsUnsigned()
-        else:
-            return self.heap_buffer.GetChildMemberWithName(
-                "mnSize"
-            ).GetValueAsUnsigned()
-
-    def calculate_capacity(self) -> int:
-        if self.is_sso():
-            return self.get_sso_capacity()
-        else:
-            heap_capacity = self.heap_buffer.GetChildMemberWithName("mnCapacity")
-            byte_order = GetSystemByteOrder()
-            if byte_order == lldb.eByteOrderLittle:
-                print(f"{heap_capacity.GetValueAsUnsigned()} >> 1")
-                return self.valobj.EvaluateExpression(
-                    f"{heap_capacity.GetValueAsUnsigned()} >> 1"
-                ).GetValueAsUnsigned()
-            elif byte_order == lldb.eByteOrderBig:
-                print(f"{heap_capacity.GetValueAsUnsigned()} & ~{self.get_heap_mask()}")
-                return self.valobj.EvaluateExpression(
-                    f"{heap_capacity.GetValueAsUnsigned()} & ~{self.get_heap_mask()}"
-                ).GetValueAsUnsigned()
-            else:
-                print("error: unrecognized byte ordering. Not little or big endian")
-                return 0
-
+class basic_string_SyntheticProvider:
     def get_length(self) -> lldb.SBValue:
-        length_type = FindType("size_type").GetTypedefedType()
-        return self.valobj.CreateValueFromData(
-            "length", CreateDataFromUInt32(self.calculate_length()), length_type
+        return self.valobj.CreateValueFromExpression(
+            "length", f"{self.valobj.GetName()}.internalLayout.GetSize()"
         )
 
     def get_capacity(self) -> lldb.SBValue:
-        capacity_type = FindType("size_type").GetTypedefedType()
-        return self.valobj.CreateValueFromData(
-            "capacity", CreateDataFromUInt32(self.calculate_capacity()), capacity_type
+        return self.valobj.CreateValueFromExpression(
+            "capacity", f"{self.valobj.GetName()}.capacity()"
         )
 
     def get_value(self) -> lldb.SBValue:
-        try:
-            str_len = self.calculate_length()
-            print("str_len", str_len)
-            if self.is_sso():
-                string_value = self.sso_buffer.GetChildMemberWithName("mData")
-                element_type = string_value.GetType().GetArrayElementType()
-                return self.valobj.CreateValueFromData(
-                    "value", string_value.GetData(), element_type.GetArrayType(str_len)
-                )
-            else:
-                return None
-        except Exception as e:
-            message = "Error reading characters of string"
-            return self.valobj.CreateValueFromData(
-                "value",
-                CreateDataFromCString(message),
-                FindType("char").GetArrayType(len(message) + 1),
-            )
+        # TODO: cast this to an array type for better viewing of the string buffer data
+        return self.valobj.CreateValueFromExpression(
+            "value", f"{self.valobj.GetName()}.internalLayout().BeginPtr()"
+        )
 
     def get_uses_heap(self) -> lldb.SBValue:
-        return self.valobj.CreateValueFromData(
-            "uses_heap",
-            CreateDataFromUInt32(1 if self.is_heap() else 0),
-            FindType("bool"),
+        return self.valobj.CreateValueFromExpression(
+            "uses_heap", f"{self.valobj.GetName()}.internalLayout().IsHeap()"
         )
 
     def __init__(self, valobj, internal_dict):
@@ -275,48 +176,63 @@ class basic_string_SyntheticChildrenProvider:
             return None
 
     def update(self):
-        string_data = self.valobj.GetChildMemberWithName(
-            "mPair"
-        ).GetChildMemberWithName("mFirst")
-        self.sso_buffer = string_data.GetChildMemberWithName("sso")
-        self.heap_buffer = string_data.GetChildMemberWithName("heap")
-        self.value_type = self.valobj.GetType().GetTemplateArgumentType(0)
         return False
 
 
-"""
-class shared_ptr_SyntheticChildrenProvider:
-    def __init__(self, valobj, internal_dict):
-        self.valobj = valobj
+# class shared_ptr_SyntheticProvider:
+#     def __init__(self, valobj, internal_dict):
+#         self.valobj = valobj
 
-    def num_children(self):
-        return 2
+#     def num_children(self):
+#         return 3
 
-    def get_child_index(self, name):
-        print('from get_child_index', name)
-        if name == 'pointer':
-            return 0
-        elif name == 'value':
-            return 1
-        else:
-            return -1
+#     def get_child_index(self, name):
+#         if name == "pointer":
+#             return 0
+#         elif name == "reference count":
+#             return 1
+#         elif name == "weak reference count":
+#             return 2
+#         else:
+#             return -1
 
-    def get_child_at_index(self, index):
-        if index == 0:
-            return self.valobj.CreateValueFromData('pointer', self.pointer.GetData(), self.pointer.GetType())
-        if index == 1:
-            return self.valobj.CreateValueFromData('value', self.value.GetData(), self.value.GetType())
-        else:
-            return None
+#     def get_child_at_index(self, index):
+#         if index == 0:
+#             pointer_value = self.valobj.CreateValueFromExpression(
+#                 "pointer", f"{self.valobj.GetName()}.mpValue"
+#             )
+#             # prevent recursive formatting shared_ptr<T>::value_type
+#             return pointer_value.Cast(
+#                 pointer_value.GetType()
+#                 .GetPointeeType()
+#                 .GetTypedefedType()
+#                 .GetPointerType()
+#             )
+#         if index == 1:
+#             # TODO: use use_count instead
+#             return self.valobj.CreateValueFromExpression(
+#                 "reference count", f"{self.valobj.GetName()}.mpRefCount.mRefCount"
+#             )
+#         if index == 2:
+#             # TODO: use
+#             print(
+#                 self.valobj.CreateValueFromExpression(
+#                     "weak reference count", f"{self.valobj.GetName()}.mpRefCount.mWeakRefCount"
+#                 )
+#             )
+#             return self.valobj.CreateValueFromExpression(
+#                 "weak reference count", f"{self.valobj.GetName()}.mpRefCount "
+#             )
+#         else:
+#             return None
 
-    def update(self):
-        try:
-            self.pointer = self.valobj.EvaluateExpression('mpValue')
-            self.value = self.valobj.EvaluateExpression('*mpValue')
-        except Exception as e:
-            print(e)
-        return False
-"""
+#     def update(self):
+#         try:
+#             self.pointer = self.valobj.EvaluateExpression("mpValue")
+#             self.value = self.valobj.EvaluateExpression("*mpValue")
+#         except Exception as e:
+#             print(e)
+#         return False
 
 
 """
@@ -378,11 +294,6 @@ def UniquePtrSummaryProvider(valobj, internal_dict):
 #         return None
 
 
-# TODO: fix
-# def CreateDataFromString(value: str):
-#     return lldb.SBData.CreateDataFromCString(GetSystemByteOrder(), len(value), value)
-
-
 def __lldb_init_module(debugger, internal_dict):
     # When debugging, run this command so that formatters are properly replaced instead of appended
     debugger.HandleCommand(f"type category delete {type_category}")
@@ -392,7 +303,7 @@ def __lldb_init_module(debugger, internal_dict):
     )
 
     debugger.HandleCommand(
-        f"type synthetic add -x ^eastl::basic_string<.*>$ -C true -l EASTL.basic_string_SyntheticChildrenProvider -w {type_category}"
+        f"type synthetic add -prx ^eastl::basic_string<.*>$ -C true -l EASTL.basic_string_SyntheticProvider -w {type_category}"
     )
     debugger.HandleCommand(
         f"type synthetic add -x ^eastl::VectorBase<.*>$ -C true -l EASTL.VectorBase_SyntheticProvider -w {type_category}"
@@ -400,7 +311,9 @@ def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand(
         f"type summary add -x ^eastl::VectorBase<.*>$ -e -F EASTL.VectorBase_SummaryProvider -w {type_category}"
     )
-    # debugger.HandleCommand(f'type synthetic add -x ^eastl::unique_ptr<.+> >$ --python-class EASTL.UniquePtrSyntheticProvider -w {type_category}')
+    # debugger.HandleCommand(
+    # f"type synthetic add -x ^eastl::shared_ptr<.*>$ -C true -l EASTL.shared_ptr_SyntheticProvider -w {type_category}"
+    # )
     debugger.HandleCommand(f"type category enable {type_category}")
     return
 
