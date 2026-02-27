@@ -1,0 +1,15 @@
+{
+    "cmake.sourceDirectory": "/Users/vsoltan/Desktop/eastl-lldb-variable-formatting/test",
+    "cmake.debugConfig": {
+        "type": "lldb-dap",
+        "request": "launch",
+        "name": "CMake Debug (LLDB)",
+        "program": "${command:cmake.launchTargetPath}",
+        "cwd": "${workspaceFolder}",
+        "args": [],
+        "env": {},
+        "initCommands": [
+            "command script import ${workspaceFolder}/EASTL.py"
+        ]
+    }
+}
