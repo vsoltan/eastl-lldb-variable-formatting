@@ -1,0 +1,35 @@
+import lldb
+
+def get_system_byte_order():
+    return lldb.debugger.GetSelectedTarget().GetByteOrder()
+
+def create_data_from_uint(value: int, byte_size=None) -> lldb.SBData:
+    target = lldb.debugger.GetSelectedTarget()
+    data_byte_size = byte_size if byte_size is not None else target.GetAddressByteSize()
+
+    if data_byte_size <= 4:
+        return lldb.SBData.CreateDataFromUInt32Array(
+            get_system_byte_order(), data_byte_size, [value & 0xFFFFFFFF]
+        )
+
+    if hasattr(lldb.SBData, "CreateDataFromUInt64Array"):
+        return lldb.SBData.CreateDataFromUInt64Array(
+            get_system_byte_order(), data_byte_size, [value & 0xFFFFFFFFFFFFFFFF]
+        )
+
+    return lldb.SBData.CreateDataFromUInt32Array(
+        get_system_byte_order(), min(data_byte_size, 4), [value & 0xFFFFFFFF]
+    )
+
+def create_data_from_cstring(value: str) -> lldb.SBData:
+    addr_byte_size = lldb.debugger.GetSelectedTarget().GetAddressByteSize()
+    return lldb.SBData.CreateDataFromCString(
+        get_system_byte_order(), addr_byte_size, value
+    )
+
+def find_type(type_name: str) -> lldb.SBType:
+    return lldb.debugger.GetSelectedTarget().FindFirstType(type_name)
+
+def get_non_synthetic_value(valobj):
+    non_synthetic = valobj.GetNonSyntheticValue()
+    return non_synthetic if non_synthetic and non_synthetic.IsValid() else valobj
