@@ -1,11 +1,12 @@
 from formatters.utils import (
     create_data_from_uint,
     find_type,
+    get_non_synthetic_value,
 )
 from formatters.constants import VECTOR_MAX_SIZE
 
 class VectorBase_SyntheticProvider:
-    staticChildren = [
+    STATIC_CHILDREN_NAMES = [
         "size",
         "capacity",
     ]
@@ -28,10 +29,10 @@ class VectorBase_SyntheticProvider:
             contiguous_bytes_length = end_addr - begin_addr
             if contiguous_bytes_length % self.data_size != 0:
                 return 0
-            num_children = int(contiguous_bytes_length / self.data_size) + len(self.staticChildren)
+            num_children = int(contiguous_bytes_length / self.data_size) + len(self.STATIC_CHILDREN_NAMES)
 
             if apply_limit and VECTOR_MAX_SIZE is not None:
-                return min(VECTOR_MAX_SIZE + len(self.staticChildren), num_children)
+                return min(VECTOR_MAX_SIZE + len(self.STATIC_CHILDREN_NAMES), num_children)
             return num_children
         except Exception:
             return 0
@@ -39,10 +40,10 @@ class VectorBase_SyntheticProvider:
     def get_child_index(self, name):
         if name.startswith("[") and name.endswith("]"):
             try:
-                return int(name.lstrip("[").rstrip("]")) + len(self.staticChildren)
+                return int(name.lstrip("[").rstrip("]")) + len(self.STATIC_CHILDREN_NAMES)
             except Exception:
                 return -1
-        return self.staticChildren.index(name)
+        return self.STATIC_CHILDREN_NAMES.index(name)
 
     def get_child_at_index(self, index):
         num_children = self._num_children(False)
@@ -51,7 +52,7 @@ class VectorBase_SyntheticProvider:
         if index == 0:
             return self.valobj.CreateValueFromData(
                 "size",
-                create_data_from_uint(num_children - len(self.staticChildren)),
+                create_data_from_uint(num_children - len(self.STATIC_CHILDREN_NAMES)),
                 find_type("eastl_size_t"),
             )
         if index == 1:
@@ -83,13 +84,13 @@ class VectorBase_SyntheticProvider:
             print(e)
         return False
 
-
 def VectorBase_SummaryProvider(valobj, internal_dict):
     try:
-        # avoid constructing a synthetic provider just to get the number of elements
-        num_elements = valobj.GetNumChildren() - len(VectorBase_SyntheticProvider.staticChildren)
-        if num_elements < 0:
-            return ""
-        return f"size={num_elements}"
+        # Trying to construct a synthetic provider using the synthetic valobj results in invalid state.
+        rawValObj = get_non_synthetic_value(valobj)
+        provider = VectorBase_SyntheticProvider(rawValObj, internal_dict)
+        provider.update()
+        num_elements = provider._num_children(False) - len(provider.STATIC_CHILDREN_NAMES)
+        return f"size={num_elements}" if num_elements >= 0 else ""
     except Exception:
         return ""
