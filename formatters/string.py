@@ -3,7 +3,6 @@ import lldb
 from formatters.constants import STRING_MAX_SIZE
 from formatters.utils import (
     create_data_from_bytes,
-    create_data_from_cstring,
     create_data_from_uint,
     find_type,
     get_non_synthetic_value,
@@ -98,11 +97,20 @@ class basic_string_SyntheticChildrenProvider:
             if not self.valid_layout:
                 return None
             if self.value_size == 1:
-                value_bytes = self.value_bytes + b"\0"
+                if self.data_address == 0:
+                    return self.valobj.CreateValueFromData(
+                        "value",
+                        create_data_from_cstring(""),
+                        find_type("char").GetArrayType(1),
+                    )
                 return self.valobj.CreateValueFromData(
                     "value",
-                    create_data_from_bytes(value_bytes),
-                    find_type("char").GetArrayType(len(self.string_value) + 1),
+                    self.valobj.CreateValueFromAddress(
+                        "__eastl_string_value",
+                        self.data_address,
+                        find_type("char").GetArrayType(self.length + 1),
+                    ).GetData(),
+                    find_type("char").GetArrayType(self.length + 1),
                 )
             if self.data_address == 0:
                 return None
