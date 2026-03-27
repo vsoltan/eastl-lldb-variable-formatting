@@ -6,8 +6,6 @@ from test_utils import (
     marker_line,
 )
 
-add_repo_root_to_path()
-
 import unittest
 from pathlib import Path
 
@@ -39,7 +37,7 @@ class ArrayFormatterTests(unittest.TestCase):
         output = lldb_frame_var(
             TEST_EXECUTABLE,
             CPP_SOURCE_FILE,
-            marker_line(CPP_SOURCE_FILE, "BREAK_ARRAY_VALUES"),
+            marker_line(CPP_SOURCE_FILE, "BREAK_ARRAY_EXCEEDS_SUMMARY_MAX"),
             "many_numbers",
         )
         self.assertIn("many_numbers = [7] { 1, 2, 3, 4, 5, 6, ... } {", output)

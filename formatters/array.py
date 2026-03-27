@@ -1,4 +1,7 @@
-from formatters.constants import ARRAY_MAX_SIZE
+from formatters.constants import (
+    ARRAY_MAX_SIZE,
+    ARRAY_MAX_SUMMARY_SIZE
+)
 from formatters.utils import (
     create_data_from_uint,
     find_type,
@@ -8,8 +11,6 @@ from formatters.utils import (
 STATIC_SYNTHETIC_CHILDREN = {
     "size": 0
 }
-
-ARRAY_SUMMARY_MAX_ELEMENTS = 6
 
 class Array_SyntheticProvider:
     def __init__(self, valobj, internal_dict):
@@ -64,17 +65,9 @@ def Array_SummaryProvider(valobj, internal_dict):
         provider = Array_SyntheticProvider(state, internal_dict)
         provider.update()
 
-        preview = []
-        for index in range(min(provider.size, ARRAY_SUMMARY_MAX_ELEMENTS)):
-            value = provider.values.GetChildAtIndex(index)
-            if not value or not value.IsValid():
-                break
-
-            preview.append(value.GetSummary() or value.GetValue() or "?")
-
-        if provider.size > ARRAY_SUMMARY_MAX_ELEMENTS:
+        preview = [provider.values.GetChildAtIndex(i).GetValue() for i in range(min(provider.size, ARRAY_MAX_SUMMARY_SIZE))]
+        if provider.size > ARRAY_MAX_SUMMARY_SIZE:
             preview.append("...")
-
         return f"[{provider.size}] {{ {', '.join(preview)} }}"
     except Exception:
         return ""
