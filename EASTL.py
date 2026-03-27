@@ -7,17 +7,14 @@ from formatters.vector import (
     VectorBase_SummaryProvider,
     VectorBase_SyntheticProvider,
 )
-from formatters.shared_ptr import (
+from formatters.ref_counted_ptr import (
+    RefCountedPtrSyntheticProvider,
     shared_ptr_SummaryProvider,
-    shared_ptr_SyntheticChildrenProvider,
+    WeakPtr_SummaryProvider,
 )
 from formatters.unique_ptr import (
     unique_ptr_SummaryProvider,
     unique_ptr_SyntheticChildrenProvider,
-)
-from formatters.weak_ptr import (
-    WeakPtr_SummaryProvider,
-    WeakPtr_SyntheticChildrenProvider,
 )
 from formatters.tree import (
     RBTree_SummaryProvider,
@@ -40,12 +37,11 @@ _ = (
     basic_string_SyntheticChildrenProvider,
     VectorBase_SummaryProvider,
     VectorBase_SyntheticProvider,
+    RefCountedPtrSyntheticProvider,
     shared_ptr_SummaryProvider,
-    shared_ptr_SyntheticChildrenProvider,
     unique_ptr_SummaryProvider,
     unique_ptr_SyntheticChildrenProvider,
     WeakPtr_SummaryProvider,
-    WeakPtr_SyntheticChildrenProvider,
     RBTree_SummaryProvider,
     RBTree_SyntheticProvider,
     Array_SummaryProvider,
@@ -76,7 +72,7 @@ def __lldb_init_module(debugger, internal_dict):
         f"type summary add -x ^eastl::vector<.*>$ -e -F EASTL.VectorBase_SummaryProvider -w {EASTL_TYPE_CATEGORY}"
     )
     debugger.HandleCommand(
-        f"type synthetic add -x ^eastl::shared_ptr<.*>$ -C true -l EASTL.shared_ptr_SyntheticChildrenProvider -w {EASTL_TYPE_CATEGORY}"
+        f"type synthetic add -x ^eastl::shared_ptr<.*>$ -C true -l EASTL.RefCountedPtrSyntheticProvider -w {EASTL_TYPE_CATEGORY}"
     )
     debugger.HandleCommand(
         f"type summary add -x ^eastl::shared_ptr<.*>$ -e -F EASTL.shared_ptr_SummaryProvider -w {EASTL_TYPE_CATEGORY}"
@@ -88,7 +84,7 @@ def __lldb_init_module(debugger, internal_dict):
         f"type summary add -x ^eastl::unique_ptr<.*>$ -e -F EASTL.unique_ptr_SummaryProvider -w {EASTL_TYPE_CATEGORY}"
     )
     debugger.HandleCommand(
-        f"type synthetic add -x ^eastl::weak_ptr<.*>$ -C true -l EASTL.WeakPtr_SyntheticChildrenProvider -w {EASTL_TYPE_CATEGORY}"
+        f"type synthetic add -x ^eastl::weak_ptr<.*>$ -C true -l EASTL.RefCountedPtrSyntheticProvider -w {EASTL_TYPE_CATEGORY}"
     )
     debugger.HandleCommand(
         f"type summary add -x ^eastl::weak_ptr<.*>$ -e -F EASTL.WeakPtr_SummaryProvider -w {EASTL_TYPE_CATEGORY}"
