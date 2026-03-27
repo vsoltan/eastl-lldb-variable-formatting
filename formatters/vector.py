@@ -68,7 +68,7 @@ class VectorBase_SyntheticProvider:
     
     def _create_element_child(self, index):
         actual_index = index - len(STATIC_SYNTHETIC_CHILDREN)
-        offset = (index - actual_index) * self.data_size
+        offset = actual_index * self.data_size
         return self.begin.CreateChildAtOffset(
             f"[{actual_index}]",
             offset,
