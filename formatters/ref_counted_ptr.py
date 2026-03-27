@@ -4,7 +4,7 @@ from formatters.utils import (
     get_non_synthetic_value,
 )
 
-class RefCountedPtrSyntheticProvider:
+class RefCountedPtrSyntheticChildrenProvider:
     SHARED_CHILDREN_NAMES = ("pointer", "use_count", "weak_count", "value")
     SHARED_CHILD_INDEX = {
         "pointer": 0,
@@ -161,7 +161,7 @@ class RefCountedPtrSyntheticProvider:
 
 def shared_ptr_SummaryProvider(valobj, internal_dict):
     try:
-        provider = RefCountedPtrSyntheticProvider(
+        provider = RefCountedPtrSyntheticChildrenProvider(
             get_non_synthetic_value(valobj), internal_dict
         )
         provider.update()
@@ -176,7 +176,7 @@ def shared_ptr_SummaryProvider(valobj, internal_dict):
 
 def WeakPtr_SummaryProvider(valobj, internal_dict):
     try:
-        provider = RefCountedPtrSyntheticProvider(
+        provider = RefCountedPtrSyntheticChildrenProvider(
             get_non_synthetic_value(valobj), internal_dict
         )
         provider.update()

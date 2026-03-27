@@ -12,7 +12,7 @@ STATIC_SYNTHETIC_CHILDREN = {
     "size": 0
 }
 
-class Array_SyntheticProvider:
+class Array_SyntheticChildrenProvider:
     def __init__(self, valobj, internal_dict):
         self.valobj = valobj
         self.values = None
@@ -62,7 +62,7 @@ class Array_SyntheticProvider:
 def Array_SummaryProvider(valobj, internal_dict):
     try:
         state = get_non_synthetic_value(valobj)
-        provider = Array_SyntheticProvider(state, internal_dict)
+        provider = Array_SyntheticChildrenProvider(state, internal_dict)
         provider.update()
 
         preview = [provider.values.GetChildAtIndex(i).GetValue() for i in range(min(provider.size, ARRAY_MAX_SUMMARY_SIZE))]

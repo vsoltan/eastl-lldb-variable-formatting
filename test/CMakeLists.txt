@@ -50,3 +50,6 @@ target_link_libraries(ArrayTest EASTL)
 
 add_executable(SpanTest SpanTest.cpp Allocator.h)
 target_link_libraries(SpanTest EASTL)
+
+add_executable(PairTest PairTest.cpp Allocator.h)
+target_link_libraries(PairTest EASTL)

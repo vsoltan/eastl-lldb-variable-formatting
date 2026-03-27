@@ -3,7 +3,7 @@ import re
 from formatters.constants import SPAN_MAX_SIZE
 from formatters.utils import create_data_from_uint, find_type
 
-class span_SyntheticProvider:
+class span_SyntheticChildrenProvider:
     STATIC_CHILD_NAMES = ("size",)
     STATIC_CHILD_INDEX = {name: idx for idx, name in enumerate(STATIC_CHILD_NAMES)}
     STATIC_CHILD_COUNT = len(STATIC_CHILD_NAMES)
@@ -84,7 +84,7 @@ def span_SummaryProvider(valobj, internal_dict):
     try:
         raw_valobj = valobj.GetNonSyntheticValue()
         probe = raw_valobj if raw_valobj and raw_valobj.IsValid() else valobj
-        provider = span_SyntheticProvider(probe, internal_dict)
+        provider = span_SyntheticChildrenProvider(probe, internal_dict)
         provider.update()
         return f"size={provider.size}"
     except Exception:

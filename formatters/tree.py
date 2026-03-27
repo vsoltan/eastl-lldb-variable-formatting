@@ -2,7 +2,7 @@ from formatters.constants import TREE_MAX_SIZE
 from formatters.utils import create_data_from_uint, find_type
 
 
-class RBTree_SyntheticProvider:
+class RBTree_SyntheticChildrenProvider:
     STATIC_CHILD_NAMES = ("size",)
     STATIC_CHILD_INDEX = {name: idx for idx, name in enumerate(STATIC_CHILD_NAMES)}
     STATIC_CHILD_COUNT = len(STATIC_CHILD_NAMES)

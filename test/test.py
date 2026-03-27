@@ -8,6 +8,7 @@ import map_test
 import set_test
 import array_test
 import span_test
+import pair_test
 
 import unittest
 
@@ -21,6 +22,7 @@ TEST_MODULES = {
     "set": set_test,
     "array": array_test,
     "span": span_test,
+    "pair": pair_test,
 }
 
 def parse_args():

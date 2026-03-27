@@ -10,7 +10,7 @@ STATIC_SYNTHETIC_CHILDREN = {
     "capacity": 1
 }
 
-class VectorBase_SyntheticProvider:
+class VectorBase_SyntheticChildrenProvider:
     def __init__(self, valobj, internal_dict):
         self.valobj = valobj
 
@@ -99,7 +99,7 @@ def VectorBase_SummaryProvider(valobj, internal_dict):
     try:
         # Trying to construct a synthetic provider using the synthetic valobj results in invalid state.
         rawValObj = get_non_synthetic_value(valobj)
-        provider = VectorBase_SyntheticProvider(rawValObj, internal_dict)
+        provider = VectorBase_SyntheticChildrenProvider(rawValObj, internal_dict)
         provider.update()
         size = provider._calculate_size()
         return f"size={size}" if size >= 0 else ""
