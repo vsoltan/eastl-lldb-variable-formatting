@@ -29,6 +29,7 @@ class WeakPtrFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_WEAK_PTR_LIVE"),
             "weak_live",
         )
+        self.assertIn("weak_live = 0x", output)
         self.assertIn("(int32_t) use_count = 1", output)
         self.assertIn("(bool) expired = false", output)
         self.assertIn("(eastl::weak_ptr<int>::element_type) value = 42", output)
@@ -40,6 +41,7 @@ class WeakPtrFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_WEAK_PTR_EXPIRED"),
             "weak_live",
         )
+        self.assertIn("weak_live = nullptr", output)
         self.assertIn("(int32_t) use_count = 0", output)
         self.assertIn("(bool) expired = true", output)
 

@@ -1,7 +1,7 @@
 import re
 
 from formatters.constants import SPAN_MAX_SIZE
-from formatters.utils import create_data_from_uint, find_type
+from formatters.utils import create_data_from_uint, find_type, format_sequence_summary, get_value_display
 
 class span_SyntheticChildrenProvider:
     STATIC_CHILD_NAMES = ("size",)
@@ -44,7 +44,7 @@ class span_SyntheticChildrenProvider:
         )
 
     def num_children(self):
-        return min(self.size, SEQUENCE_MAX_SIZE) + self.STATIC_CHILD_COUNT
+        return min(self.size, SPAN_MAX_SIZE) + self.STATIC_CHILD_COUNT
 
     def get_child_index(self, name):
         if name.startswith("[") and name.endswith("]"):
@@ -86,6 +86,10 @@ def span_SummaryProvider(valobj, internal_dict):
         probe = raw_valobj if raw_valobj and raw_valobj.IsValid() else valobj
         provider = span_SyntheticChildrenProvider(probe, internal_dict)
         provider.update()
-        return f"size={provider.size}"
+        preview = [
+            get_value_display(provider.get_child_at_index(index + provider.STATIC_CHILD_COUNT))
+            for index in range(min(provider.size, 6))
+        ]
+        return format_sequence_summary(provider.size, preview, truncated=provider.size > 6)
     except Exception:
         return ""

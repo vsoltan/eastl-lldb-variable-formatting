@@ -1,5 +1,6 @@
 
 from formatters.utils import (
+    get_value_display,
     get_non_synthetic_value
 )
 
@@ -30,8 +31,9 @@ class pair_SyntheticChildrenProvider:
             return self.first
         if index == 1:
             return self.second
-        
+
 def pair_SummaryProvider(valobj, internal_dict):
-    first = valobj.GetChildMemberWithName("first").GetValue()
-    second = valobj.GetChildMemberWithName("second").GetValue()
+    raw_valobj = get_non_synthetic_value(valobj)
+    first = get_value_display(raw_valobj.GetChildMemberWithName("first"))
+    second = get_value_display(raw_valobj.GetChildMemberWithName("second"))
     return f"({first}, {second})"

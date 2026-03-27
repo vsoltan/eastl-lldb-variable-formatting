@@ -27,6 +27,7 @@ class StringFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_STRING_SSO"),
             "sso",
         )
+        self.assertIn('(eastl::string) sso = "hello"', output)
         self.assertIn("(bool) uses_heap = false", output)
         self.assertIn("(size_type) length = 5", output)
         self.assertIn('value = "hello"', output)
@@ -38,6 +39,7 @@ class StringFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_STRING_SSO_APPEND"),
             "sso",
         )
+        self.assertIn('(eastl::string) sso = "hello world"', output)
         self.assertIn("(bool) uses_heap = false", output)
         self.assertIn("(size_type) length = 11", output)
         self.assertIn('value = "hello world"', output)
@@ -49,6 +51,7 @@ class StringFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_STRING_HEAP"),
             "heap",
         )
+        self.assertIn('(eastl::string) heap = "hellotherethisisalongstringthatexceedsssocapacity"', output)
         self.assertIn("(bool) uses_heap = true", output)
         self.assertIn("(size_type) length = 49", output)
         self.assertIn('value = "hellotherethisisalongstringthatexceedsssocapacity"', output)
@@ -60,6 +63,7 @@ class StringFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_STRING_SSO_TO_HEAP_APPEND"),
             "ssoToHeap",
         )
+        self.assertIn('(eastl::string) ssoToHeap = "shortStringshouldbetransitionedtoheap"', output)
         self.assertIn("(bool) uses_heap = true", output)
         self.assertIn('value = "shortStringshouldbetransitionedtoheap"', output)
 

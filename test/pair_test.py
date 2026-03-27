@@ -30,6 +30,17 @@ class PairFormatterTests(unittest.TestCase):
         self.assertIn("(int) first = 1", output)
         self.assertIn("(int) second = 2", output)
 
+    def test_pair_summary_with_nested_string(self):
+        output = lldb_frame_var(
+            TEST_EXECUTABLE,
+            CPP_SOURCE_FILE,
+            marker_line(CPP_SOURCE_FILE, "BREAK_PAIR_STRING"),
+            "mixed",
+        )
+        self.assertIn('mixed = (5, "hello") {', output)
+        self.assertIn("(int) first = 5", output)
+        self.assertIn('value = "hello"', output)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -1,3 +1,5 @@
+from formatters.utils import get_non_synthetic_value
+
 class unique_ptr_SyntheticChildrenProvider:
     STATIC_SYNTHETIC_CHILDREN = {
         "pointer" : 0,
@@ -45,17 +47,19 @@ class unique_ptr_SyntheticChildrenProvider:
 
 def unique_ptr_SummaryProvider(valobj, internal_dict):
     try:
-        provider = unique_ptr_SyntheticChildrenProvider(valobj, internal_dict)
+        provider = unique_ptr_SyntheticChildrenProvider(
+            get_non_synthetic_value(valobj), internal_dict
+        )
         provider.update()
         if not provider.pointer or not provider.pointer.IsValid():
             return ""
         if provider.pointer.GetValueAsUnsigned(0) == 0:
-            return "nullptr"
+            return "(nullptr)"
         value = provider._get_value_child()
         if value and value.IsValid():
             summary = value.GetSummary() or value.GetValue()
             if summary:
-                return summary
+                return f"({provider.pointer.GetValue()} = {summary})"
         return ""
     except Exception:
         return ""

@@ -5,6 +5,8 @@ from formatters.constants import (
 from formatters.utils import (
     create_data_from_uint,
     find_type,
+    format_sequence_summary,
+    get_value_display,
     get_non_synthetic_value,
 )
 
@@ -65,9 +67,14 @@ def Array_SummaryProvider(valobj, internal_dict):
         provider = Array_SyntheticChildrenProvider(state, internal_dict)
         provider.update()
 
-        preview = [provider.values.GetChildAtIndex(i).GetValue() for i in range(min(provider.size, ARRAY_MAX_SUMMARY_SIZE))]
-        if provider.size > ARRAY_MAX_SUMMARY_SIZE:
-            preview.append("...")
-        return f"[{provider.size}] {{ {', '.join(preview)} }}"
+        preview = [
+            get_value_display(provider.values.GetChildAtIndex(i))
+            for i in range(min(provider.size, ARRAY_MAX_SUMMARY_SIZE))
+        ]
+        return format_sequence_summary(
+            provider.size,
+            preview,
+            truncated=provider.size > ARRAY_MAX_SUMMARY_SIZE,
+        )
     except Exception:
         return ""

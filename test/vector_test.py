@@ -28,7 +28,7 @@ class VectorFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_VECTOR_INITIALIZED"),
             "v",
         )
-        self.assertIn("(eastl::vector<int>) v = size=5", output)
+        self.assertIn("(eastl::vector<int>) v = [5] { 1, 2, 3, 4, 5 }", output)
         self.assertIn("(eastl_size_t) size = 5", output)
         self.assertIn("(eastl_size_t) capacity = 5", output)
         self.assertIn("(int) [0] = 1", output)
@@ -44,7 +44,7 @@ class VectorFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_VECTOR_PUSHED"),
             "v",
         )
-        self.assertIn("(eastl::vector<int>) v = size=6", output)
+        self.assertIn("(eastl::vector<int>) v = [6] { 1, 2, 3, 4, 5, 6 }", output)
         self.assertIn("(int) [5] = 6", output)
     
     def test_after_clear(self):
@@ -54,7 +54,7 @@ class VectorFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_VECTOR_CLEARED"),
             "v",
         )
-        self.assertIn("(eastl::vector<int>) v = size=0", output)
+        self.assertIn("(eastl::vector<int>) v = [0] {}", output)
 
     def test_after_large_push_back(self):
         output = lldb_frame_var(
@@ -65,7 +65,7 @@ class VectorFormatterTests(unittest.TestCase):
         )
         # The max size cap is used to limit the number of synthetic children that LLDB creates, but
         # it should not affect the summary or size values.
-        self.assertIn("(eastl::vector<int>) v = size=10000", output)
+        self.assertIn("(eastl::vector<int>) v = [10000] { 0, 1, 2, 3, 4, 5, ... }", output)
         self.assertIn("(eastl_size_t) size = 10000", output)
         self.assertIn(f"(int) [{VECTOR_MAX_SIZE - 1}] = {VECTOR_MAX_SIZE - 1}", output)
         self.assertNotIn(f"(int) [{VECTOR_MAX_SIZE}] =", output)
@@ -77,7 +77,7 @@ class VectorFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_VECTOR_RESIZED"),
             "v",
         )
-        self.assertIn("(eastl::vector<int>) v = size=100", output)
+        self.assertIn("(eastl::vector<int>) v = [100] { 0, 1, 2, 3, 4, 5, ... }", output)
         self.assertIn("(eastl_size_t) size = 100", output)
 
 if __name__ == "__main__":

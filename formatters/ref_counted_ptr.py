@@ -1,6 +1,7 @@
 from formatters.utils import (
     create_data_from_uint,
     find_type,
+    get_value_display,
     get_non_synthetic_value,
 )
 
@@ -168,8 +169,8 @@ def shared_ptr_SummaryProvider(valobj, internal_dict):
         if not provider._valid_layout:
             return ""
         if provider.value.GetValueAsUnsigned(0) == 0:
-            return "nullptr"
-        return f"use_count={provider._get_use_count_value()}"
+            return "(nullptr)"
+        return f"({provider.value.GetValue()} = {get_value_display(provider._get_value_child())})"
     except Exception:
         return ""
 
@@ -183,7 +184,7 @@ def WeakPtr_SummaryProvider(valobj, internal_dict):
         if not provider._valid_layout:
             return ""
         if provider._is_expired():
-            return "expired"
-        return f"use_count={provider._get_use_count_value()}"
+            return "nullptr"
+        return provider.value.GetValue() or ""
     except Exception:
         return ""

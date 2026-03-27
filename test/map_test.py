@@ -29,7 +29,7 @@ class MapFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_MAP_VALUES"),
             "labels",
         )
-        self.assertIn("size=3", output)
+        self.assertIn('labels = [3] { (1, "one"), ... }', output)
         self.assertIn("(eastl_size_t) size = 3", output)
         self.assertIn("(const int) first = 1", output)
         self.assertIn("(const int) first = 2", output)

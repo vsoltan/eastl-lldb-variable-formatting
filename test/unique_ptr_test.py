@@ -29,6 +29,7 @@ class UniquePtrFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_UNIQUE_PTR_NULL"),
             "unique_null",
         )
+        self.assertIn("unique_null = (nullptr)", output)
         self.assertIn("pointer = 0x0000000000000000", output)
 
     def test_unique_ptr_value(self):
@@ -38,6 +39,8 @@ class UniquePtrFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_UNIQUE_PTR_VALUE"),
             "unique_value",
         )
+        self.assertIn("unique_value = (0x", output)
+        self.assertIn(" = 7)", output)
         self.assertIn("pointer = 0x", output)
         self.assertIn("(int) value = 7", output)
 

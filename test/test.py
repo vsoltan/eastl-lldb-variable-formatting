@@ -1,28 +1,29 @@
 import argparse
-import string_test
+
+import array_test
+import map_test
+import pair_test
+import set_test
 import shared_ptr_test
+import span_test
+import string_test
 import unique_ptr_test
 import vector_test
 import weak_ptr_test
-import map_test
-import set_test
-import array_test
-import span_test
-import pair_test
 
 import unittest
 
 TEST_MODULES = {
-    "vector": vector_test,
-    "string": string_test,
-    "shared_ptr": shared_ptr_test,
-    "unique_ptr": unique_ptr_test,
-    "weak_ptr": weak_ptr_test,
-    "map": map_test,
-    "set": set_test,
     "array": array_test,
-    "span": span_test,
+    "map": map_test,
     "pair": pair_test,
+    "set": set_test,
+    "shared_ptr": shared_ptr_test,
+    "span": span_test,
+    "string": string_test,
+    "unique_ptr": unique_ptr_test,
+    "vector": vector_test,
+    "weak_ptr": weak_ptr_test,
 }
 
 def parse_args():

@@ -29,7 +29,7 @@ class SpanFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_SPAN_DYNAMIC"),
             "dynamic_span",
         )
-        self.assertIn("size=3", output)
+        self.assertIn("dynamic_span = [3] { 5, 6, 7 }", output)
         self.assertIn("(eastl_size_t) size = 3", output)
         self.assertIn("(int) [0] = 5", output)
         self.assertIn("(int) [1] = 6", output)
@@ -42,7 +42,7 @@ class SpanFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_SPAN_STATIC"),
             "static_span",
         )
-        self.assertIn("size=3", output)
+        self.assertIn("static_span = [3] { 5, 6, 7 }", output)
         self.assertIn("(eastl_size_t) size = 3", output)
         self.assertIn("(int) [0] = 5", output)
         self.assertIn("(int) [1] = 6", output)

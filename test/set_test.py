@@ -29,7 +29,7 @@ class SetFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_SET_VALUES"),
             "numbers",
         )
-        self.assertIn("size=3", output)
+        self.assertIn("numbers = [3] { 3, ... }", output)
         self.assertIn("(eastl_size_t) size = 3", output)
         self.assertIn("(int) [0] = 3", output)
         self.assertIn("(int) [1] = 8", output)

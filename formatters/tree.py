@@ -1,5 +1,5 @@
 from formatters.constants import TREE_MAX_SIZE
-from formatters.utils import create_data_from_uint, find_type
+from formatters.utils import create_data_from_uint, find_type, format_sequence_summary, get_value_display, get_non_synthetic_value
 
 
 class RBTree_SyntheticChildrenProvider:
@@ -141,14 +141,11 @@ class RBTree_SyntheticChildrenProvider:
 
 def RBTree_SummaryProvider(valobj, internal_dict):
     try:
-        size = 0
-        raw_valobj = valobj.GetNonSyntheticValue()
-        if raw_valobj and raw_valobj.IsValid():
-            size = raw_valobj.GetChildMemberWithName("mnSize").GetValueAsUnsigned(0)
-        if size == 0:
-            size_eval = valobj.EvaluateExpression("mnSize")
-            if size_eval and size_eval.IsValid() and size_eval.GetError().Success():
-                size = size_eval.GetValueAsUnsigned(0)
-        return f"size={size}"
+        provider = RBTree_SyntheticChildrenProvider(get_non_synthetic_value(valobj), internal_dict)
+        provider.update()
+        preview = []
+        if provider.size > 0:
+            preview.append(get_value_display(provider._build_element_child(0)))
+        return format_sequence_summary(provider.size, preview, truncated=provider.size > 1)
     except Exception:
         return ""

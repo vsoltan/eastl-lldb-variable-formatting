@@ -2,6 +2,8 @@ from formatters.constants import VECTOR_MAX_SIZE
 from formatters.utils import (
     create_data_from_uint,
     find_type,
+    format_sequence_summary,
+    get_value_display,
     get_non_synthetic_value,
 )
 
@@ -102,6 +104,11 @@ def VectorBase_SummaryProvider(valobj, internal_dict):
         provider = VectorBase_SyntheticChildrenProvider(rawValObj, internal_dict)
         provider.update()
         size = provider._calculate_size()
-        return f"size={size}" if size >= 0 else ""
+        preview_count = min(size, 6)
+        preview = [
+            get_value_display(provider._create_element_child(index + len(STATIC_SYNTHETIC_CHILDREN)))
+            for index in range(preview_count)
+        ]
+        return format_sequence_summary(size, preview, truncated=size > 6) if size >= 0 else ""
     except Exception:
         return ""

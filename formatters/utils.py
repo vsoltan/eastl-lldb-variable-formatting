@@ -27,9 +27,29 @@ def create_data_from_cstring(value: str) -> lldb.SBData:
         get_system_byte_order(), addr_byte_size, value
     )
 
+def create_data_from_bytes(value: bytes) -> lldb.SBData:
+    if hasattr(lldb.SBData, "CreateDataFromUInt8Array"):
+        return lldb.SBData.CreateDataFromUInt8Array(
+            get_system_byte_order(), 1, list(value)
+        )
+    return create_data_from_cstring(value.decode("latin-1"))
+
 def find_type(type_name: str) -> lldb.SBType:
     return lldb.debugger.GetSelectedTarget().FindFirstType(type_name)
 
 def get_non_synthetic_value(valobj):
     non_synthetic = valobj.GetNonSyntheticValue()
     return non_synthetic if non_synthetic and non_synthetic.IsValid() else valobj
+
+def get_value_display(value):
+    if not value or not value.IsValid():
+        return "?"
+    return value.GetSummary() or value.GetValue() or "?"
+
+def format_sequence_summary(size, preview_values, truncated=False):
+    values = list(preview_values)
+    if truncated:
+        values.append("...")
+    if not values:
+        return f"[{size}] {{}}"
+    return f"[{size}] {{ {', '.join(values)} }}"

@@ -29,6 +29,7 @@ class SharedPtrFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_SHARED_PTR_NULL"),
             "null_ptr",
         )
+        self.assertIn("null_ptr = (nullptr)", output)
         self.assertIn("(eastl::shared_ptr<int>::element_type *) pointer = 0x0000000000000000", output)
         self.assertIn("(int32_t) use_count = 0", output)
         self.assertIn("(int32_t) weak_count = 0", output)
@@ -40,6 +41,8 @@ class SharedPtrFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_SHARED_PTR_VALUE"),
             "ptr",
         )
+        self.assertIn("ptr = (0x", output)
+        self.assertIn(" = 42)", output)
         self.assertIn("(eastl::shared_ptr<int>::element_type *) pointer = 0x", output)
         self.assertIn("(int32_t) use_count = 1", output)
         self.assertIn("(int32_t) weak_count = 1", output)
@@ -52,6 +55,7 @@ class SharedPtrFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_SHARED_PTR_COPIED"),
             "ptr ptr_copy",
         )
+        self.assertIn("ptr = (0x", output)
         self.assertIn("(int32_t) use_count = 2", output)
         self.assertIn("(eastl::shared_ptr<int>::element_type) value = 42", output)
 
