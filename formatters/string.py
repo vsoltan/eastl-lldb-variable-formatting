@@ -25,6 +25,7 @@ class basic_string_SyntheticChildrenProvider:
         self.uses_heap = False
         self.data_address = 0
         self.string_value = ""
+        self.value_bytes = b""
         self.size_type = None
         self.value_type = None
         self.value_size = 0
@@ -61,18 +62,21 @@ class basic_string_SyntheticChildrenProvider:
         heap_mask = 1 << (bits - 1)
         return encoded_capacity & ~heap_mask
 
-    def _read_char_string(self, address, length):
+    def _read_char_bytes(self, address, length):
         try:
             if address == 0 or length < 0 or self.value_size != 1:
-                return ""
+                return b""
             error = lldb.SBError()
             process = self.valobj.GetProcess()
             if not process or not process.IsValid():
-                return ""
-            value = process.ReadCStringFromMemory(address, length + 1, error)
-            return value if error.Success() else ""
+                return b""
+            value = process.ReadMemory(address, length, error)
+            return value if error.Success() else b""
         except Exception:
-            return ""
+            return b""
+
+    def _escape_string_summary(self):
+        return self.string_value.encode("unicode_escape").decode("ascii").replace('"', '\\"')
 
     def _create_length_child(self):
         return self.valobj.CreateValueFromData(
@@ -139,6 +143,7 @@ class basic_string_SyntheticChildrenProvider:
         self.uses_heap = False
         self.data_address = 0
         self.string_value = ""
+        self.value_bytes = b""
         self.size_type = None
         self.value_type = None
         self.value_size = 0
@@ -189,7 +194,8 @@ class basic_string_SyntheticChildrenProvider:
 
         self.length = min(self.length, STRING_MAX_SIZE)
         if self.value_size == 1 and self.data_address != 0:
-            self.string_value = self._read_char_string(self.data_address, self.length)[: self.length]
+            self.value_bytes = self._read_char_bytes(self.data_address, self.length)[: self.length]
+            self.string_value = self.value_bytes.decode("latin-1")
         return False
 
 
@@ -201,6 +207,8 @@ def basic_string_SummaryProvider(valobj, internal_dict):
         provider.update()
         if not provider.valid_layout:
             return ""
+        if provider.value_size == 1:
+            return f'"{provider._escape_string_summary()}"'
         value = provider._create_value_child()
         if value and value.IsValid() and value.GetSummary():
             return value.GetSummary()
