@@ -65,18 +65,12 @@ def Array_SummaryProvider(valobj, internal_dict):
         provider.update()
 
         preview = []
-        preview_count = min(provider.size, ARRAY_SUMMARY_MAX_ELEMENTS)
-        for index in range(preview_count):
+        for index in range(min(provider.size, ARRAY_SUMMARY_MAX_ELEMENTS)):
             value = provider.values.GetChildAtIndex(index)
             if not value or not value.IsValid():
                 break
 
-            display_value = value.GetSummary()
-            if display_value is None:
-                display_value = value.GetValue()
-            if display_value is None:
-                display_value = "?"
-            preview.append(display_value)
+            preview.append(value.GetSummary() or value.GetValue() or "?")
 
         if provider.size > ARRAY_SUMMARY_MAX_ELEMENTS:
             preview.append("...")
