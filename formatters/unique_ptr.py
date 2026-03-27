@@ -1,18 +1,30 @@
 class unique_ptr_SyntheticChildrenProvider:
-    STATIC_CHILD_NAMES = ("pointer", "value")
-    STATIC_CHILD_INDEX = {name: idx for idx, name in enumerate(STATIC_CHILD_NAMES)}
+    STATIC_SYNTHETIC_CHILDREN = {
+        "pointer" : 0,
+        "value" : 1,
+    }
 
     def __init__(self, valobj, internal_dict):
         self.valobj = valobj
         self.pointer = None
 
     def num_children(self):
-        if not self.pointer or not self.pointer.IsValid():
-            return 0
-        return 2
+        return len(self.STATIC_SYNTHETIC_CHILDREN) if self.pointer and self.pointer.IsValid() else 0
 
     def get_child_index(self, name):
-        return self.STATIC_CHILD_INDEX.get(name, -1)
+        return self.STATIC_SYNTHETIC_CHILDREN.get(name, -1)
+    
+    def get_child_at_index(self, index):
+        if index == 0:
+            return self._get_pointer_child()
+        if index == 1:
+            return self._get_value_child()
+        return None
+
+    def update(self):
+        pair = self.valobj.GetChildMemberWithName("mPair")
+        self.pointer = pair.GetChildMemberWithName("mFirst")
+        return False
 
     def _get_pointer_child(self):
         return self.valobj.CreateValueFromData(
@@ -28,17 +40,7 @@ class unique_ptr_SyntheticChildrenProvider:
             return None
         return self.valobj.CreateValueFromData("value", value.GetData(), value.GetType())
 
-    def get_child_at_index(self, index):
-        if index == 0:
-            return self._get_pointer_child()
-        if index == 1:
-            return self._get_value_child()
-        return None
-
-    def update(self):
-        pair = self.valobj.GetChildMemberWithName("mPair")
-        self.pointer = pair.GetChildMemberWithName("mFirst")
-        return False
+    
 
 
 def unique_ptr_SummaryProvider(valobj, internal_dict):

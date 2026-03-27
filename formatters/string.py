@@ -1,8 +1,6 @@
 import lldb
 
-from formatters.utils import *
 from formatters.constants import STRING_MAX_SIZE
-
 from formatters.utils import (
     create_data_from_cstring,
     create_data_from_uint,
@@ -11,7 +9,7 @@ from formatters.utils import (
 )
 
 class basic_string_SyntheticChildrenProvider:
-    staticChildren = [
+    SYNTHETIC_CHILDREN_NAMES = [
         "length",
         "capacity",
         "uses_heap",
@@ -233,7 +231,7 @@ class basic_string_SyntheticChildrenProvider:
 
 def basic_string_SummaryProvider(valobj, internal_dict):
     try:
-        provider = basic_string_SyntheticChildrenProvider(valobj, internal_dict)
+        provider = basic_string_SyntheticChildrenProvider(get_non_synthetic_value(valobj, internal_dict))
         provider.update()
         if not provider._valid_layout or not provider._runtime_state_valid:
             return ""

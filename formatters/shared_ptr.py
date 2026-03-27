@@ -3,8 +3,8 @@ from formatters.ref_counted_ptr import RefCountedPtrSyntheticChildrenProviderBas
 
 class shared_ptr_SyntheticChildrenProvider(RefCountedPtrSyntheticChildrenProviderBase):
     STATIC_CHILDREN_NAMES = ("pointer", "use_count", "weak_count", "value")
-    STATIC_CHILD_INDEX = {name: idx for idx, name in enumerate(STATIC_CHILD_NAMES)}
-    STATIC_CHILD_COUNT = len(STATIC_CHILD_NAMES)
+    STATIC_CHILD_INDEX = {name: idx for idx, name in enumerate(STATIC_CHILDREN_NAMES)}
+    STATIC_CHILD_COUNT = len(STATIC_CHILDREN_NAMES)
 
     def num_children(self):
         return self.STATIC_CHILD_COUNT if self._valid_layout else 0
