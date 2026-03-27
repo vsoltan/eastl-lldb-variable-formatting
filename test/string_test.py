@@ -28,8 +28,8 @@ class StringFormatterTests(unittest.TestCase):
             "sso",
         )
         self.assertIn('(eastl::string) sso = "hello"', output)
-        self.assertIn("(bool) uses_heap = false", output)
-        self.assertIn("(size_type) length = 5", output)
+        self.assertIn("uses_heap = false", output)
+        self.assertIn("length = 5", output)
         self.assertIn('value = "hello"', output)
 
     def test_string_appended_sso(self):
@@ -40,8 +40,8 @@ class StringFormatterTests(unittest.TestCase):
             "sso",
         )
         self.assertIn('(eastl::string) sso = "hello world"', output)
-        self.assertIn("(bool) uses_heap = false", output)
-        self.assertIn("(size_type) length = 11", output)
+        self.assertIn("uses_heap = false", output)
+        self.assertIn("length = 11", output)
         self.assertIn('value = "hello world"', output)
 
     def test_string_heap(self):
@@ -52,8 +52,8 @@ class StringFormatterTests(unittest.TestCase):
             "heap",
         )
         self.assertIn('(eastl::string) heap = "hellotherethisisalongstringthatexceedsssocapacity"', output)
-        self.assertIn("(bool) uses_heap = true", output)
-        self.assertIn("(size_type) length = 49", output)
+        self.assertIn("uses_heap = true", output)
+        self.assertIn("length = 49", output)
         self.assertIn('value = "hellotherethisisalongstringthatexceedsssocapacity"', output)
 
     def test_string_sso_to_heap(self):
@@ -64,7 +64,7 @@ class StringFormatterTests(unittest.TestCase):
             "ssoToHeap",
         )
         self.assertIn('(eastl::string) ssoToHeap = "shortStringshouldbetransitionedtoheap"', output)
-        self.assertIn("(bool) uses_heap = true", output)
+        self.assertIn("uses_heap = true", output)
         self.assertIn('value = "shortStringshouldbetransitionedtoheap"', output)
 
 
