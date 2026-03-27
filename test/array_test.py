@@ -29,11 +29,21 @@ class ArrayFormatterTests(unittest.TestCase):
             marker_line(CPP_SOURCE_FILE, "BREAK_ARRAY_VALUES"),
             "numbers",
         )
-        self.assertIn("size=3", output)
+        self.assertIn("numbers = [3] { 3, 1, 4 } {", output)
         self.assertIn("(eastl_size_t) size = 3", output)
         self.assertIn("[0] = 3", output)
         self.assertIn("[1] = 1", output)
         self.assertIn("[2] = 4", output)
+
+    def test_array_summary_truncates_after_six_elements(self):
+        output = lldb_frame_var(
+            TEST_EXECUTABLE,
+            CPP_SOURCE_FILE,
+            marker_line(CPP_SOURCE_FILE, "BREAK_ARRAY_VALUES"),
+            "many_numbers",
+        )
+        self.assertIn("many_numbers = [7] { 1, 2, 3, 4, 5, 6, ... } {", output)
+        self.assertIn("[6] = 7", output)
 
 
 if __name__ == "__main__":

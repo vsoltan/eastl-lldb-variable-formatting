@@ -9,6 +9,8 @@ STATIC_SYNTHETIC_CHILDREN = {
     "size": 0
 }
 
+ARRAY_SUMMARY_MAX_ELEMENTS = 6
+
 class Array_SyntheticProvider:
     def __init__(self, valobj, internal_dict):
         self.valobj = valobj
@@ -61,12 +63,24 @@ def Array_SummaryProvider(valobj, internal_dict):
         state = get_non_synthetic_value(valobj)
         provider = Array_SyntheticProvider(state, internal_dict)
         provider.update()
-        size = provider.size
-        print(size)
-        elems = []
-        for i in range(0, min(size, 6)):
-            elems[i] = provider.values.GetChildAtIndex(i)
-        print (",".join(elems))
-        return f"[{size}]"
+
+        preview = []
+        preview_count = min(provider.size, ARRAY_SUMMARY_MAX_ELEMENTS)
+        for index in range(preview_count):
+            value = provider.values.GetChildAtIndex(index)
+            if not value or not value.IsValid():
+                break
+
+            display_value = value.GetSummary()
+            if display_value is None:
+                display_value = value.GetValue()
+            if display_value is None:
+                display_value = "?"
+            preview.append(display_value)
+
+        if provider.size > ARRAY_SUMMARY_MAX_ELEMENTS:
+            preview.append("...")
+
+        return f"[{provider.size}] {{ {', '.join(preview)} }}"
     except Exception:
         return ""
