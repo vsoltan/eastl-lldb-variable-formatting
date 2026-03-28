@@ -37,6 +37,11 @@ def create_data_from_bytes(value: bytes) -> lldb.SBData:
 def find_type(type_name: str) -> lldb.SBType:
     return lldb.debugger.GetSelectedTarget().FindFirstType(type_name)
 
+# This function is most helpful in our summary providers that receive a synthetic instance of our object.
+# To provide the summary, we sometimes need to query information from the object and the logic is already
+# implemented in the synthetic child provider. However, constructing a provider instance using a synthetic
+# instance of the object results in an invalid state. This is because the synthetic instance only contains
+# synthetic child members, not the original members that are used in the provider implementation.
 def get_non_synthetic_value(valobj):
     non_synthetic = valobj.GetNonSyntheticValue()
     return non_synthetic if non_synthetic and non_synthetic.IsValid() else valobj
