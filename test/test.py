@@ -28,24 +28,23 @@ TEST_MODULES = {
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run all LLDB formatter tests or a single test module."
+        description="Run all LLDB formatter tests or one or more specific test modules."
     )
     parser.add_argument(
-        "module",
-        nargs="?",
+        "modules",
+        nargs="*",
         choices=sorted(TEST_MODULES),
-        
-        help="single module to run (for example: string, vector, map)",
+        help="modules to run (for example: string vector map)",
     )
     return parser.parse_args()
 
 
-def suite(module_name=None):
+def suite(module_names=None):
     loader = unittest.defaultTestLoader
     combined = unittest.TestSuite()
     modules = TEST_MODULES.items()
-    if module_name is not None:
-        modules = [(module_name, TEST_MODULES[module_name])]
+    if module_names:
+        modules = [(module_name, TEST_MODULES[module_name]) for module_name in module_names]
 
     for _, module in modules:
         combined.addTests(loader.loadTestsFromModule(module))
@@ -55,5 +54,5 @@ def suite(module_name=None):
 if __name__ == "__main__":
     args = parse_args()
     runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite(args.module))
+    result = runner.run(suite(args.modules))
     raise SystemExit(0 if result.wasSuccessful() else 1)
