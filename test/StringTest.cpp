@@ -4,6 +4,10 @@
 
 int main()
 {
+    // BREAK_STRING_UNINITIALIZED
+    eastl::string empty = "";
+    // BREAK_STRING_EMPTY
+
     eastl::string sso = "hello";
     // BREAK_STRING_SSO
     sso += " world";
@@ -18,5 +22,11 @@ int main()
     // BREAK_STRING_SSO_TO_HEAP
     ssoToHeap += "shouldbetransitionedtoheap";
     // BREAK_STRING_SSO_TO_HEAP_APPEND
+
+    eastl::string8 s8 = "regular string";
+    eastl::u8string su8 = u8"utf8 string";
+    eastl::string16 s16 = u"wide string";
+    eastl::string32 s32 = U"even wider string";
+    // BREAK_VARIABLE_WIDTH_STRING
     return 0;
 }

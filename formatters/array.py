@@ -15,10 +15,10 @@ STATIC_SYNTHETIC_CHILDREN = {
 
 class Array_SyntheticChildrenProvider:
     def __init__(self, valobj, internal_dict):
-        self.valobj = valobj
+        self._valobj = valobj
 
     def update(self):
-        self._values = self.valobj.GetChildMemberWithName("mValue")
+        self._values = self._valobj.GetChildMemberWithName("mValue")
         self._size = self._calculate_size()
         return False
 
@@ -41,7 +41,7 @@ class Array_SyntheticChildrenProvider:
         return self._create_element_child(index)
 
     def _create_size_child(self, size):
-        return self.valobj.CreateValueFromData(
+        return self._valobj.CreateValueFromData(
             "size",
             create_data_from_uint(self._size),
             find_type(TYPE_SIZE_T)
@@ -52,7 +52,7 @@ class Array_SyntheticChildrenProvider:
         value = self._values.GetChildAtIndex(actual_index)
         if not value or not value.IsValid():
             return None
-        return self.valobj.CreateValueFromData(
+        return self._valobj.CreateValueFromData(
             f"[{actual_index}]",
             value.GetData(),
             value.GetType(),

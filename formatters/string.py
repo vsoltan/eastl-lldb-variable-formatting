@@ -4,7 +4,6 @@ from formatters.constants import (
     STRING_MAX_SIZE
 )
 from formatters.utils import (
-    create_data_from_bytes,
     create_data_from_cstring,
     create_data_from_uint,
     find_type,
@@ -22,60 +21,80 @@ class basic_string_SyntheticChildrenProvider:
 
     def __init__(self, valobj, internal_dict):
         self._valobj = valobj
-        self._valid_layout = False
 
     def update(self):
-        string_data = self._valobj.GetChildMemberWithName("mPair").GetChildMemberWithName("mFirst")
-        if not string_data.IsValid():
+        self._valid_layout = False
+
+        layout = self._valobj.GetChildMemberWithName("mPair").GetChildMemberWithName("mFirst")
+        if not layout.IsValid():
             return False
 
-        sso_buffer = string_data.GetChildMemberWithName("sso")
-        sso_data = sso_buffer.GetChildMemberWithName("mData")
-        remaining_size_field = sso_buffer.GetChildMemberWithName(
-            "mRemainingSizeField"
-        ).GetChildMemberWithName("mnRemainingSize")
-
-        heap_buffer = string_data.GetChildMemberWithName("heap")
-        heap_begin = heap_buffer.GetChildMemberWithName("mpBegin")
-        heap_size = heap_buffer.GetChildMemberWithName("mnSize")
-        heap_capacity = heap_buffer.GetChildMemberWithName("mnCapacity")
-
-        self._size_type = heap_size.GetType()
-        self._value_type = self._valobj.GetType().GetTemplateArgumentType(0)
-        self.value_size = self._value_type.GetByteSize()
-        self._valid_layout = (
-            sso_buffer.IsValid()
-            and heap_buffer.IsValid()
-            and sso_data.IsValid()
-            and remaining_size_field.IsValid()
-            and heap_begin.IsValid()
-            and heap_size.IsValid()
-            and heap_capacity.IsValid()
-            and self._size_type.IsValid()
-            and self._value_type.IsValid()
-            and self.value_size > 0
-        )
-        if not self._valid_layout:
+        sso = layout.GetChildMemberWithName("sso")
+        heap = layout.GetChildMemberWithName("heap")
+        if not sso.IsValid() or not heap.IsValid():
             return False
 
-        remaining_size_raw = remaining_size_field.GetValueAsUnsigned(0) & 0xFF
-        self.uses_heap = self._calculate_is_heap(remaining_size_raw)
-        if self.uses_heap:
-            self.length = heap_size.GetValueAsUnsigned(0)
-            self.capacity = self._decode_heap_capacity(heap_capacity.GetValueAsUnsigned(0))
-            self.data_address = heap_begin.GetValueAsUnsigned(0)
-        else:
-            sso_capacity = self._calculate_sso_capacity(sso_data.GetType())
-            remaining = min(self._decode_sso_remaining_capacity(remaining_size_raw), sso_capacity)
-            self.length = max(0, sso_capacity - remaining)
-            self.capacity = sso_capacity
-            self.data_address = sso_data.AddressOf().GetValueAsUnsigned(0)
+        remaining_size_field = sso.GetChildMemberWithName("mRemainingSizeField").GetChildMemberWithName("mnRemainingSize")
+        value_type = self._valobj.GetType().GetTemplateArgumentType(0)
+        heap_size = heap.GetChildMemberWithName("mnSize")
 
-        self.length = min(self.length, STRING_MAX_SIZE)
-        if self.value_size == 1 and self.data_address != 0:
-            self.value_bytes = self._read_char_bytes(self.data_address, self.length)[: self.length]
-            self.string_value = self.value_bytes.decode("latin-1")
+        if not heap_size.IsValid() or not remaining_size_field.IsValid() or not value_type.IsValid():
+            return False
+
+        size_type = heap_size.GetType()
+        if not size_type.IsValid() or value_type.GetByteSize() <= 0:
+            return False
+
+        self._size_type = size_type
+        self._value_type = value_type
+        self._value_size = value_type.GetByteSize()
+        self._is_heap = self._read_is_heap(remaining_size_field)
+        self._length, self._capacity, self._data_address = self._read_memory(heap, sso, heap_size)
+        self._string_value = self._read_string_value()
+        self._valid_layout = True
         return False
+
+    def _read_is_heap(self, remaining_size_field):
+        remaining_size_raw = remaining_size_field.GetValueAsUnsigned(0) & 0xFF
+        sso_mask = 0x1 if get_system_byte_order() == lldb.eByteOrderBig else 0x80
+        return bool(remaining_size_raw & sso_mask)
+
+    def _read_memory(self, heap, sso, heap_size):
+        if self._is_heap:
+            heap_begin = heap.GetChildMemberWithName("mpBegin")
+            heap_capacity = heap.GetChildMemberWithName("mnCapacity")
+            if not heap_begin.IsValid() or not heap_capacity.IsValid():
+                return (0, 0, 0)
+            length = min(heap_size.GetValueAsUnsigned(0), STRING_MAX_SIZE)
+            capacity = self._decode_heap_capacity(heap_capacity.GetValueAsUnsigned(0))
+            data_address = heap_begin.GetValueAsUnsigned(0)
+        else:
+            sso_data = sso.GetChildMemberWithName("mData")
+            remaining_size_field = sso.GetChildMemberWithName("mRemainingSizeField").GetChildMemberWithName("mnRemainingSize")
+            if not sso_data.IsValid() or not remaining_size_field.IsValid():
+                return (0, 0, 0)
+            sso_capacity = int(sso_data.GetType().GetByteSize() / self._value_size)
+            remaining_size_raw = remaining_size_field.GetValueAsUnsigned(0) & 0xFF
+            remaining = min(self._decode_sso_remaining_capacity(remaining_size_raw), sso_capacity)
+            length = min(max(0, sso_capacity - remaining), STRING_MAX_SIZE)
+            capacity = sso_capacity
+            data_address = sso_data.AddressOf().GetValueAsUnsigned(0)
+        return (length, capacity, data_address)
+
+    def _read_string_value(self):
+        if self._data_address == 0:
+            return None
+        raw_bytes = self._read_bytes(self._data_address, self._length * self._value_size)
+        if not raw_bytes:
+            return None
+        if self._value_size == 1:
+            return raw_bytes.decode("utf-8", errors="replace")
+        is_little_endian = get_system_byte_order() != lldb.eByteOrderBig
+        if self._value_size == 2:
+            return raw_bytes.decode("utf-16-le" if is_little_endian else "utf-16-be", errors="replace")
+        if self._value_size == 4:
+            return raw_bytes.decode("utf-32-le" if is_little_endian else "utf-32-be", errors="replace")
+        return None
 
     def num_children(self):
         return len(self.STATIC_SYNTHETIC_CHILDREN) if self._valid_layout else 0
@@ -95,26 +114,6 @@ class basic_string_SyntheticChildrenProvider:
         if index == 3:
             return self._create_value_child()
         return None
-    
-    def _check_set_valid_layout(self):
-        pass
-
-    def __size_type_bits(self):
-        return self._size_type.GetByteSize() * 8
-
-    def _calculate_sso_capacity(self, sso_data_type):
-        if self.value_size <= 0 or not sso_data_type or not sso_data_type.IsValid():
-            return 0
-        return int(sso_data_type.GetByteSize() / self.value_size)
-
-    def _get_sso_mask(self):
-        byte_order = get_system_byte_order()
-        if byte_order == lldb.eByteOrderBig:
-            return 0x1
-        return 0x80
-
-    def _calculate_is_heap(self, remaining_size_raw):
-        return bool(remaining_size_raw & self._get_sso_mask())
 
     def _decode_sso_remaining_capacity(self, remaining_size_raw):
         if get_system_byte_order() == lldb.eByteOrderBig:
@@ -124,17 +123,13 @@ class basic_string_SyntheticChildrenProvider:
     def _decode_heap_capacity(self, encoded_capacity):
         if get_system_byte_order() == lldb.eByteOrderBig:
             return encoded_capacity >> 1
-
-        bits = self.__size_type_bits()
+        bits = self._size_type.GetByteSize() * 8
         if bits <= 1:
             return 0
-        heap_mask = 1 << (bits - 1)
-        return encoded_capacity & ~heap_mask
+        return encoded_capacity & ~(1 << (bits - 1))
 
-    def _read_char_bytes(self, address, length):
+    def _read_bytes(self, address, length):
         try:
-            if address == 0 or length < 0 or self.value_size != 1:
-                return b""
             error = lldb.SBError()
             process = self._valobj.GetProcess()
             if not process or not process.IsValid():
@@ -145,28 +140,35 @@ class basic_string_SyntheticChildrenProvider:
             return b""
 
     def _escape_string_summary(self):
-        return self.string_value.encode("unicode_escape").decode("ascii").replace('"', '\\"')
+        if not self._string_value:
+            return ""
+        return self._string_value.encode("unicode_escape").decode("ascii").replace('"', '\\"')
 
     def _create_length_child(self):
         return self._valobj.CreateValueFromData(
             "length",
-            create_data_from_uint(self.length, self._size_type.GetByteSize()),
+            create_data_from_uint(self._length, self._size_type.GetByteSize()),
             self._size_type,
         )
 
     def _create_capacity_child(self):
         return self._valobj.CreateValueFromData(
             "capacity",
-            create_data_from_uint(self.capacity, self._size_type.GetByteSize()),
+            create_data_from_uint(self._capacity, self._size_type.GetByteSize()),
             self._size_type,
+        )
+
+    def _create_uses_heap_child(self):
+        return self._valobj.CreateValueFromData(
+            "uses_heap",
+            create_data_from_uint(1 if self._is_heap else 0, 1),
+            find_type("bool"),
         )
 
     def _create_value_child(self):
         try:
-            if not self._valid_layout:
-                return None
-            if self.value_size == 1:
-                if self.data_address == 0:
+            if self._value_size == 1:
+                if self._data_address == 0:
                     return self._valobj.CreateValueFromData(
                         "value",
                         create_data_from_cstring(""),
@@ -176,25 +178,19 @@ class basic_string_SyntheticChildrenProvider:
                     "value",
                     self._valobj.CreateValueFromAddress(
                         "__eastl_string_value",
-                        self.data_address,
-                        find_type("char").GetArrayType(self.length + 1),
+                        self._data_address,
+                        find_type("char").GetArrayType(self._length + 1),
                     ).GetData(),
-                    find_type("char").GetArrayType(self.length + 1),
+                    find_type("char").GetArrayType(self._length + 1),
                 )
-            if self.data_address == 0:
+            if self._data_address == 0:
                 return None
             return self._valobj.CreateValueFromAddress(
-                "value", self.data_address, self._value_type.GetArrayType(max(1, self.length + 1))
+                "value", self._data_address, self._value_type.GetArrayType(max(1, self._length + 1))
             )
         except Exception:
             return None
 
-    def _create_uses_heap_child(self):
-        return self._valobj.CreateValueFromData(
-            "uses_heap",
-            create_data_from_uint(1 if self.uses_heap else 0, 1),
-            find_type("bool"),
-        )
 
 def basic_string_SummaryProvider(valobj, internal_dict):
     try:
@@ -204,11 +200,8 @@ def basic_string_SummaryProvider(valobj, internal_dict):
         provider.update()
         if not provider._valid_layout:
             return ""
-        if provider.value_size == 1:
+        if provider._string_value is not None:
             return f'"{provider._escape_string_summary()}"'
-        value = provider._create_value_child()
-        if value and value.IsValid() and value.GetSummary():
-            return value.GetSummary()
         return ""
     except Exception:
         return ""

@@ -16,13 +16,13 @@ STATIC_SYNTHETIC_CHILDREN = {
 
 class VectorBase_SyntheticChildrenProvider:
     def __init__(self, valobj, internal_dict):
-        self.valobj = valobj
+        self._valobj = valobj
 
     def update(self):
         try:
-            self._begin_addr = self.valobj.GetChildMemberWithName("mpBegin")
-            self._end_addr = self.valobj.GetChildMemberWithName("mpEnd")
-            self._capacity_addr = self.valobj.GetChildMemberWithName(
+            self._begin_addr = self._valobj.GetChildMemberWithName("mpBegin")
+            self._end_addr = self._valobj.GetChildMemberWithName("mpEnd")
+            self._capacity_addr = self._valobj.GetChildMemberWithName(
                 "mCapacityAllocator"
             ).GetChildMemberWithName("mFirst")
             self._data_type = self._begin_addr.GetType().GetPointeeType()
@@ -58,14 +58,14 @@ class VectorBase_SyntheticChildrenProvider:
             return None
 
     def _create_size_child(self, size):
-        return self.valobj.CreateValueFromData(
+        return self._valobj.CreateValueFromData(
             "size",
             create_data_from_uint(size),
             find_type(TYPE_SIZE_T),
         )
 
     def _create_capacity_child(self, capacity):
-        return self.valobj.CreateValueFromData(
+        return self._valobj.CreateValueFromData(
             "capacity",
             create_data_from_uint(capacity),
             find_type(TYPE_SIZE_T),
