@@ -1,13 +1,12 @@
 from formatters.constants import (
     ARRAY_MAX_SIZE,
-    ARRAY_MAX_SUMMARY_SIZE
+    ARRAY_MAX_SUMMARY_SIZE,
+    TYPE_SIZE_T
 )
 from formatters.utils import (
     create_data_from_uint,
     find_type,
-    format_sequence_summary,
     get_value_display,
-    get_non_synthetic_value,
 )
 
 STATIC_SYNTHETIC_CHILDREN = {
@@ -17,16 +16,14 @@ STATIC_SYNTHETIC_CHILDREN = {
 class Array_SyntheticChildrenProvider:
     def __init__(self, valobj, internal_dict):
         self.valobj = valobj
-        self.values = None
-        self.size = 0
 
     def update(self):
-        self.values = self.valobj.GetChildMemberWithName("mValue")
-        self.size = self.values.GetNumChildren() if self.values and self.values.IsValid() else 0
+        self._values = self.valobj.GetChildMemberWithName("mValue")
+        self._size = self._calculate_size()
         return False
 
     def num_children(self):
-        return min(ARRAY_MAX_SIZE, self.size) + len(STATIC_SYNTHETIC_CHILDREN)
+        return min(ARRAY_MAX_SIZE, self._size) + len(STATIC_SYNTHETIC_CHILDREN)
 
     def get_child_index(self, name):
         if name.startswith("[") and name.endswith("]"):
@@ -40,19 +37,19 @@ class Array_SyntheticChildrenProvider:
         if index < 0 or index >= self.num_children():
             return None
         if index == 0:
-            return self._create_size_child(self.size)
+            return self._create_size_child(self._size)
         return self._create_element_child(index)
 
     def _create_size_child(self, size):
         return self.valobj.CreateValueFromData(
             "size",
-            create_data_from_uint(self.size),
-            find_type("eastl_size_t")
+            create_data_from_uint(self._size),
+            find_type(TYPE_SIZE_T)
         )
     
     def _create_element_child(self, index):
         actual_index = index - len(STATIC_SYNTHETIC_CHILDREN)
-        value = self.values.GetChildAtIndex(actual_index)
+        value = self._values.GetChildAtIndex(actual_index)
         if not value or not value.IsValid():
             return None
         return self.valobj.CreateValueFromData(
@@ -60,21 +57,18 @@ class Array_SyntheticChildrenProvider:
             value.GetData(),
             value.GetType(),
         )
-
+    
+    def _calculate_size(self):
+        return self._values.GetNumChildren() if self._values and self._values.IsValid() else 0
+        
 def Array_SummaryProvider(valobj, internal_dict):
-    try:
-        state = get_non_synthetic_value(valobj)
-        provider = Array_SyntheticChildrenProvider(state, internal_dict)
-        provider.update()
-
-        preview = [
-            get_value_display(provider.values.GetChildAtIndex(i))
-            for i in range(min(provider.size, ARRAY_MAX_SUMMARY_SIZE))
-        ]
-        return format_sequence_summary(
-            provider.size,
-            preview,
-            truncated=provider.size > ARRAY_MAX_SUMMARY_SIZE,
-        )
-    except Exception:
-        return ""
+    size = valobj.GetChildAtIndex(STATIC_SYNTHETIC_CHILDREN.get("size")).GetValueAsUnsigned(0)
+    elems = [ 
+        get_value_display(valobj.GetChildAtIndex(i + len(STATIC_SYNTHETIC_CHILDREN))) 
+        for i in range(min(size, ARRAY_MAX_SUMMARY_SIZE))
+    ]
+    if size > ARRAY_MAX_SUMMARY_SIZE:
+        elems.append("...")
+    if not elems:
+        return f"[{size}] {{}}"
+    return f"[{size}] {{ {', '.join(elems)} }}"
