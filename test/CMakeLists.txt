@@ -19,6 +19,8 @@ FetchContent_Declare(
     GIT_TAG        master # can also specify a specific commit here
 )
 
+set(CMAKE_BUILD_TYPE DEBUG)
+
 FetchContent_MakeAvailable(EASTL)
 
 add_executable(ManualTest ManualTest.cpp Allocator.h)
