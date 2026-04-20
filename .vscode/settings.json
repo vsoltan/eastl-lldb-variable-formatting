@@ -1,5 +1,5 @@
 {
-    "cmake.sourceDirectory": "/Users/vsoltan/Desktop/eastl-lldb-variable-formatting/test",
+    "cmake.sourceDirectory": "${workspaceFolder}/test",
     "cmake.debugConfig": {
         "type": "lldb-dap",
         "request": "launch",
