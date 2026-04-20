@@ -1,4 +1,5 @@
 #include <EASTL/string.h>
+#include <EASTL/vector.h>
 
 #include "Allocator.h"
 
@@ -28,5 +29,11 @@ int main()
     eastl::string16 s16 = u"wide string";
     eastl::string32 s32 = U"even wider string";
     // BREAK_VARIABLE_WIDTH_STRING
-    return 0;
+
+    eastl::vector<eastl::string> strings = {"hello", "world", "foo"};
+    volatile int dummy = 0;
+    for (const auto& s : strings) {
+        dummy += s.length(); // BREAK_STRING_RANGE_LOOP
+    }
+    return dummy;
 }

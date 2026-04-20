@@ -46,6 +46,12 @@ def get_non_synthetic_value(valobj):
     non_synthetic = valobj.GetNonSyntheticValue()
     return non_synthetic if non_synthetic and non_synthetic.IsValid() else valobj
 
+def get_raw_type(valobj):
+    t = valobj.GetType()
+    if t.IsReferenceType():
+        t = t.GetDereferencedType()
+    return t
+
 def get_value_display(value):
     if not value or not value.IsValid():
         return "?"

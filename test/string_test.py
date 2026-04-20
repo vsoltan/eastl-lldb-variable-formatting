@@ -20,6 +20,7 @@ MARKER_FRAMES = [
     ("BREAK_STRING_HEAP",               ["heap"]),
     ("BREAK_STRING_SSO_TO_HEAP_APPEND", ["ssoToHeap"]),
     ("BREAK_VARIABLE_WIDTH_STRING",     ["s8", "su8", "s16", "s32"]),
+    ("BREAK_STRING_RANGE_LOOP",         ["s"]),
 ]
 
 class StringFormatterTests(unittest.TestCase):
@@ -80,6 +81,12 @@ class StringFormatterTests(unittest.TestCase):
         self.assertIn('(eastl::string32) s32 = "even wider string"', output)
         self.assertIn("uses_heap = true", output)
         self.assertIn("length = 17", output)
+
+    def test_string_range_loop_reference(self):
+        output = self._frames["BREAK_STRING_RANGE_LOOP"]
+        self.assertIn('"hello"', output)
+        self.assertIn("length = 5", output)
+        self.assertIn('value = "hello"', output)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

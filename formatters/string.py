@@ -8,6 +8,7 @@ from formatters.utils import (
     create_data_from_uint,
     find_type,
     get_non_synthetic_value,
+    get_raw_type,
     get_system_byte_order,
 )
 
@@ -35,7 +36,7 @@ class basic_string_SyntheticChildrenProvider:
             return False
 
         remaining_size_field = sso.GetChildMemberWithName("mRemainingSizeField").GetChildMemberWithName("mnRemainingSize")
-        value_type = self._valobj.GetType().GetTemplateArgumentType(0)
+        value_type = get_raw_type(self._valobj).GetTemplateArgumentType(0)
         heap_size = heap.GetChildMemberWithName("mnSize")
 
         if not heap_size.IsValid() or not remaining_size_field.IsValid() or not value_type.IsValid():
